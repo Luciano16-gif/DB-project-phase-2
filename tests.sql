@@ -162,7 +162,7 @@ SELECT I.nombre, INV.cantidad
 FROM Inventario INV
 JOIN Insumo_Medico I ON INV.id_insumo = I.id_insumo
 WHERE INV.id_hospital = 2 AND INV.id_insumo IN (9, 10);
--- El Inventario del Hospital 2 no tiene inicialmente los insumos 9 y 10, por lo que deberían aparecer con las cantidades del encargo.
+-- El Inventario del Hospital 2 tiene 35 unidades de Tijera Mayo (ID 9) y 25 unidades de Separador Farabeuf (ID 10) inicialmente.
 
 -- Estado inicial del encargo 4
 SELECT id_encargo, estado, fecha_recepcion FROM Encargo WHERE id_encargo = 4;
@@ -175,27 +175,25 @@ SELECT I.nombre, INV.cantidad
 FROM Inventario INV
 JOIN Insumo_Medico I ON INV.id_insumo = I.id_insumo
 WHERE INV.id_hospital = 2 AND INV.id_insumo IN (9, 10);
--- Se espera que Bisturí (ID 9) aparezca con 8 unidades y Pinza Kelly (ID 10) con 6 unidades.
+-- Se espera que Tijera Mayo (ID 9) aparezca con 43 unidades y Separador Farabeuf (ID 10) con 31 unidades.
 SELECT id_encargo, estado, fecha_recepcion FROM Encargo WHERE id_encargo = 4;
 
 -- Limpiar cambios
 ROLLBACK;
 
---==========================================================================  
---PRUEBA 5.2: Recepción de un encargo donde algunos insumos ya existían y 
---otros son nuevos
---==========================================================================
---Descripción: Actualizar el estado de otro encargo pendiente a 'Recibido', 
---que contiene insumos ya existentes y nuevos en el inventario del hospital.
---Resultado Esperado: Las cantidades de los insumos existentes deben sumarse 
---a las del encargo, y los nuevos deben insertarse.
---==========================================================================
--- Antes de la recepción del encargo (Encargo ID 6 - Hospital 3, Insumos 1 y 11):
+-- Se borran las gasas temporalmente para correr la prueba
+DELETE FROM inventario 
+WHERE id_insumo IN (
+    SELECT id_insumo 
+    FROM Insumo_Medico 
+    WHERE id_insumo = 11
+) AND id_hospital = 3;
+
 SELECT I.nombre, INV.cantidad
 FROM Inventario INV
 JOIN Insumo_Medico I ON INV.id_insumo = I.id_insumo
 WHERE INV.id_hospital = 3 AND INV.id_insumo IN (1, 11);
--- Insumo 1 (Paracetamol) tiene 90 en H3. Insumo 11 (Gasas) no existe en H3.
+-- Insumo 1 (Paracetamol) tiene 70 en H3. Insumo 11 (Gasas) no existe en H3.
 
 -- Estado inicial del encargo 6
 SELECT id_encargo, estado, fecha_recepcion FROM Encargo WHERE id_encargo = 6;
@@ -208,7 +206,7 @@ SELECT I.nombre, INV.cantidad
 FROM Inventario INV
 JOIN Insumo_Medico I ON INV.id_insumo = I.id_insumo
 WHERE INV.id_hospital = 3 AND INV.id_insumo IN (1, 11);
--- Se espera que Paracetamol (ID 1) sea 90 + 60 = 150.
+-- Se espera que Paracetamol (ID 1) sea 70 + 60 = 130.
 -- Se espera que Gasas (ID 11) aparezca con 100 unidades.
 SELECT id_encargo, estado, fecha_recepcion FROM Encargo WHERE id_encargo = 6;
 
@@ -219,7 +217,7 @@ ROLLBACK;
 --PRUEBA 5.3: No activación del trigger si el estado no cambia a 'Recibido'
 --====================================================================== 
 --Descripción: Crear un encargo y cambiar su estado a algo diferente de 
---n'Recibido' (ej. 'Cancelado') o a 'Recibido' si ya estaba 'Recibido'.
+--'Recibido' (ej. 'Cancelado') o a 'Recibido' si ya estaba 'Recibido'.
 --Resultado Esperado: La cantidad de los insumos en Inventario no debe 
 --cambiar.
 --======================================================================
@@ -275,20 +273,48 @@ ROLLBACK;
 --=====================================================================
 --PRUEBA 6.2: Pago parcial de factura por seguro
 --=====================================================================
---Descripción: Realizar un Pago_Seguro que no cubra el monto total de una --factura.
+--Descripción: Realizar un Pago_Seguro que no cubra el monto total de una 
+--factura.
 --Resultado Esperado: El estado de la Factura debe permanecer 'Pendiente'.
 --=====================================================================
 
--- Antes del pctura ID 14 - 52ago (Fa20.00 Pendiente):
+-- Agregar seguro para el paciente de la factura 14 (V-20000002)
+INSERT INTO Afiliacion_Seguro (ci_paciente, id_aseguradora, numero_poliza, fecha_inicio, fecha_fin, monto_cobertura) VALUES
+('V-20000002', 1, 'POL-TEST-2024', '2024-01-01', '2025-12-31', 60000.00);
+
+-- Antes del pago (Factura ID 14 - 5220.00 Pendiente):
 SELECT id_factura, total, estado, metodo_pago FROM Factura WHERE id_factura = 14;
 
 -- Realizar un pago parcial de seguro (menos del total)
 INSERT INTO Pago_Seguro (id_factura, id_afiliacion, monto_cubierto, fecha_pago, numero_autorizacion) VALUES
-(14, (SELECT id_afiliacion FROM Afiliacion_Seguro WHERE ci_paciente = 'V-10000002'), 2000.00, CURRENT_DATE, 'AUT-014-PART1');
+(14, (SELECT id_afiliacion FROM Afiliacion_Seguro WHERE ci_paciente = 'V-20000002'), 2000.00, CURRENT_DATE, 'AUT-014-PART1');
 
 -- Después del pago:
 SELECT id_factura, total, estado, metodo_pago FROM Factura WHERE id_factura = 14;
 -- Se espera que el estado siga siendo 'Pendiente'.
+
+-- Verificar el pago registrado y el saldo pendiente:
+SELECT 
+    F.id_factura,
+    F.total AS total_factura,
+    F.estado,
+    COALESCE(SUM(PS.monto_cubierto), 0) AS total_pagado,
+    F.total - COALESCE(SUM(PS.monto_cubierto), 0) AS saldo_pendiente
+FROM Factura F
+LEFT JOIN Pago_Seguro PS ON F.id_factura = PS.id_factura
+WHERE F.id_factura = 14
+GROUP BY F.id_factura, F.total, F.estado;
+
+-- Ver los pagos individuales realizados:
+SELECT 
+    PS.id_pago,
+    PS.id_factura,
+    PS.monto_cubierto,
+    PS.fecha_pago,
+    PS.numero_autorizacion
+FROM Pago_Seguro PS
+WHERE PS.id_factura = 14
+ORDER BY PS.fecha_pago;
 
 -- Limpiar cambios
 ROLLBACK;
@@ -296,26 +322,81 @@ ROLLBACK;
 --==========================================================================
 --PRUEBA 6.3: Múltiples pagos hasta cubrir el total
 --==========================================================================
---Descripción: Realizar varios Pago_Seguro que sumados cubran el monto total --de una factura.
---Resultado Esperado: El estado de la Factura debe cambiar a 'Pagada' y --metodo_pago a 'Seguro' solo después del último pago que complete o supere --el total.
+--Descripción: Realizar varios Pago_Seguro que sumados cubran el monto total 
+--de una factura.
+--Resultado Esperado: El estado de la Factura debe cambiar a 'Pagada' y 
+--metodo_pago a 'Seguro' solo después del último pago que complete o supere 
+--el total.
 --==========================================================================
 
--- Antes de los pagos adicionales (Factura ID 14 - 5220.00 Pendiente, ya con 2000.00 pagados):
+-- Agregar seguro para el paciente de la factura 14 (V-20000002)
+INSERT INTO Afiliacion_Seguro (ci_paciente, id_aseguradora, numero_poliza, fecha_inicio, fecha_fin, monto_cobertura) VALUES
+('V-20000002', 1, 'POL-TEST-2024', '2024-01-01', '2025-12-31', 60000.00);
+
+-- Antes de los pagos (Factura ID 14 - 5220.00 Pendiente):
 SELECT id_factura, total, estado, metodo_pago FROM Factura WHERE id_factura = 14;
 
--- Realizar un segundo pago (no suficiente para cubrir el total)
+-- Realizar primer pago (no suficiente para cubrir el total)
 INSERT INTO Pago_Seguro (id_factura, id_afiliacion, monto_cubierto, fecha_pago, numero_autorizacion) VALUES
-(14, (SELECT id_afiliacion FROM Afiliacion_Seguro WHERE ci_paciente = 'V-10000002'), 1500.00, CURRENT_DATE, 'AUT-014-PART2');
+(14, (SELECT id_afiliacion FROM Afiliacion_Seguro WHERE ci_paciente = 'V-20000002'), 2000.00, CURRENT_DATE, 'AUT-014-PART1');
 
--- Verificar el estado (debería seguir Pendiente, 2000+1500 = 3500 < 5220.00)
-SELECT id_factura, total, estado, metodo_pago FROM Factura WHERE id_factura = 14;
+-- Verificar estado después del primer pago
+SELECT 
+    F.id_factura,
+    F.total AS total_factura,
+    F.estado,
+    COALESCE(SUM(PS.monto_cubierto), 0) AS total_pagado,
+    F.total - COALESCE(SUM(PS.monto_cubierto), 0) AS saldo_pendiente
+FROM Factura F
+LEFT JOIN Pago_Seguro PS ON F.id_factura = PS.id_factura
+WHERE F.id_factura = 14
+GROUP BY F.id_factura, F.total, F.estado;
 
--- Realizar un tercer pago (suficiente para cubrir o superar el total)
+-- Realizar segundo pago (no suficiente para cubrir el total)
 INSERT INTO Pago_Seguro (id_factura, id_afiliacion, monto_cubierto, fecha_pago, numero_autorizacion) VALUES
-(14, (SELECT id_afiliacion FROM Afiliacion_Seguro WHERE ci_paciente = 'V-10000002'), 1720.00, CURRENT_DATE, 'AUT-014-FINAL'); -- Ahora 3500 + 1720 = 5220
+(14, (SELECT id_afiliacion FROM Afiliacion_Seguro WHERE ci_paciente = 'V-20000002'), 1500.00, CURRENT_DATE, 'AUT-014-PART2');
+
+-- Verificar estado después del segundo pago (2000+1500 = 3500 < 5220.00)
+SELECT 
+    F.id_factura,
+    F.total AS total_factura,
+    F.estado,
+    COALESCE(SUM(PS.monto_cubierto), 0) AS total_pagado,
+    F.total - COALESCE(SUM(PS.monto_cubierto), 0) AS saldo_pendiente
+FROM Factura F
+LEFT JOIN Pago_Seguro PS ON F.id_factura = PS.id_factura
+WHERE F.id_factura = 14
+GROUP BY F.id_factura, F.total, F.estado;
+
+-- Realizar tercer pago (suficiente para cubrir el total)
+INSERT INTO Pago_Seguro (id_factura, id_afiliacion, monto_cubierto, fecha_pago, numero_autorizacion) VALUES
+(14, (SELECT id_afiliacion FROM Afiliacion_Seguro WHERE ci_paciente = 'V-20000002'), 1720.00, CURRENT_DATE, 'AUT-014-FINAL'); -- Ahora 3500 + 1720 = 5220
 
 -- Verificar el estado final (debería ser Pagada)
 SELECT id_factura, total, estado, metodo_pago FROM Factura WHERE id_factura = 14;
+
+-- Ver resumen final de pagos:
+SELECT 
+    F.id_factura,
+    F.total AS total_factura,
+    F.estado,
+    COALESCE(SUM(PS.monto_cubierto), 0) AS total_pagado,
+    F.total - COALESCE(SUM(PS.monto_cubierto), 0) AS saldo_pendiente
+FROM Factura F
+LEFT JOIN Pago_Seguro PS ON F.id_factura = PS.id_factura
+WHERE F.id_factura = 14
+GROUP BY F.id_factura, F.total, F.estado;
+
+-- Ver todos los pagos individuales:
+SELECT 
+    PS.id_pago,
+    PS.id_factura,
+    PS.monto_cubierto,
+    PS.fecha_pago,
+    PS.numero_autorizacion
+FROM Pago_Seguro PS
+WHERE PS.id_factura = 14
+ORDER BY PS.fecha_pago;
 
 -- Limpiar cambios
 ROLLBACK;
@@ -323,8 +404,11 @@ ROLLBACK;
 
 --==========================================================================
 --PRUEBA 7.1: Integridad Referencial (Inventario con id_hospital inexistente)
---==========================================================================--Descripción: Intenta insertar un registro en Inventario con un id_hospital --que no existe en la tabla Hospital.
---Resultado Esperado: La inserción debe fallar con un error de violación de --la foreign key.
+--==========================================================================
+--Descripción: Intenta insertar un registro en Inventario con un id_hospital 
+--que no existe en la tabla Hospital.
+--Resultado Esperado: La inserción debe fallar con un error de violación de 
+--la foreign key.
 --==========================================================================
 -- ESTA INSERCIÓN DEBERÍA FALLAR
 INSERT INTO Inventario (id_hospital, id_insumo, cantidad) VALUES (9999, 1, 100);
@@ -335,8 +419,10 @@ ROLLBACK;
 --==========================================================================
 --PRUEBA 7.2: Integridad Referencial (Inventario con id_insumo inexistente)
 --==========================================================================
---Descripción: Intenta insertar un registro en Inventario con un id_insumo --que no existe en la tabla Insumo_Medico.
---Resultado Esperado: La inserción debe fallar con un error de violación de --la foreign key.
+--Descripción: Intenta insertar un registro en Inventario con un id_insumo 
+--que no existe en la tabla Insumo_Medico.
+--Resultado Esperado: La inserción debe fallar con un error de violación de 
+--la foreign key.
 --==========================================================================
 
 -- ESTA INSERCIÓN DEBERÍA FALLAR
@@ -346,10 +432,13 @@ INSERT INTO Inventario (id_hospital, id_insumo, cantidad) VALUES (1, 9999, 100);
 ROLLBACK;
 
 --==========================================================================
---PRUEBA 7.3: Integridad Referencial (Evento_Clinico con ci_paciente --inexistente)
+--PRUEBA 7.3: Integridad Referencial (Evento_Clinico con ci_paciente 
+--inexistente)
 --==========================================================================
---Descripción: Intenta insertar un Evento_Clinico con un ci_paciente que no --existe.
---Resultado Esperado: La inserción debe fallar con un error de violación de --la foreign key.
+--Descripción: Intenta insertar un Evento_Clinico con un ci_paciente que no 
+--existe.
+--Resultado Esperado: La inserción debe fallar con un error de violación de 
+--la foreign key.
 --==========================================================================
 
 INSERT INTO Evento_Clinico (tipo, fecha, hora, ci_paciente, ci_medico, id_hospital, descripcion, costo) VALUES
@@ -359,10 +448,13 @@ INSERT INTO Evento_Clinico (tipo, fecha, hora, ci_paciente, ci_medico, id_hospit
 ROLLBACK;
 
 --========================================================================== 
---PRUEBA 7.4: Integridad Referencial (Evento_Clinico con ci_medico --inexistente)
+--PRUEBA 7.4: Integridad Referencial (Evento_Clinico con ci_medico 
+--inexistente)
 --==========================================================================
---Descripción: Intenta insertar un Evento_Clinico con un ci_medico que no --existe.
---Resultado Esperado: La inserción debe fallar con un error de violación de --la foreign key.
+--Descripción: Intenta insertar un Evento_Clinico con un ci_medico que no 
+--existe.
+--Resultado Esperado: La inserción debe fallar con un error de violación de 
+--la foreign key.
 --==========================================================================
 
 -- ESTA INSERCIÓN DEBERÍA FALLAR
@@ -375,8 +467,10 @@ ROLLBACK;
 --==========================================================================
 --PRUEBA 7.5: Integridad Referencial (Habitacion con Departamento inexistente)
 --==========================================================================
---Descripción: Intenta insertar una Habitacion referenciando un id_hospital --y numero_departamento que no existen juntos.
---Resultado Esperado: La inserción debe fallar con un error de violación de --la foreign key.
+--Descripción: Intenta insertar una Habitacion referenciando un id_hospital 
+--y numero_departamento que no existen juntos.
+--Resultado Esperado: La inserción debe fallar con un error de violación de 
+--la foreign key.
 --==========================================================================
 
 -- ESTA INSERCIÓN DEBERÍA FALLAR
@@ -414,7 +508,8 @@ ROLLBACK; -- Revertir la inserción exitosa
 --==========================================================================
 --PRUEBA 8.1: Listar hospitales con su número total de camas actualizadas
 --==========================================================================
---Descripción: Consulta el nombre y el número total de camas para cada --hospital, reflejando las actualizaciones realizadas por el trigger.
+--Descripción: Consulta el nombre y el número total de camas para cada 
+--hospital, reflejando las actualizaciones realizadas por el trigger.
 --Resultado Esperado: Una lista de hospitales con sus num_camas actuales.
 --========================================================================== 
 
@@ -423,7 +518,9 @@ SELECT id_hospital, nombre, num_camas FROM Hospital;
 --========================================================================== 
 --PRUEBA 8.2: Mostrar el inventario actual de un hospital específico
 --========================================================================== 
---Descripción: Visualiza el inventario actual (nombre del insumo, cantidad y --stock mínimo) para un hospital particular (ej. Hospital Central - ID 1), --verificando los cambios por el uso y recepción de insumos. 
+--Descripción: Visualiza el inventario actual (nombre del insumo, cantidad y 
+--stock mínimo) para un hospital particular (ej. Hospital Central - ID 1), 
+--verificando los cambios por el uso y recepción de insumos. 
 --Resultado Esperado: Una lista detallada del inventario del Hospital Central.
 --========================================================================== 
 
@@ -440,8 +537,12 @@ ORDER BY IM.nombre;
 
 --==========================================================================
 --PRUEBA 8.3: Obtener todas las facturas y su estado de pago
---========================================================================== --Descripción: Muestra un resumen de todas las facturas, incluyendo detalles --del paciente, tipo de evento, fecha, total y su estado de pago final --(Pagada o Pendiente), para verificar el trigger de pagos de seguro.
---Resultado Esperado: Una lista completa de facturas con su estado --actualizado.
+--========================================================================== 
+--Descripción: Muestra un resumen de todas las facturas, incluyendo detalles 
+--del paciente, tipo de evento, fecha, total y su estado de pago final 
+--(Pagada o Pendiente), para verificar el trigger de pagos de seguro.
+--Resultado Esperado: Una lista completa de facturas con su estado 
+--actualizado.
 --==========================================================================
 
 SELECT
@@ -460,8 +561,12 @@ ORDER BY F.id_factura;
 
 --==========================================================================
 --PRUEBA 8.4: Detalle de los pagos de seguro para una factura específica
---========================================================================== --Descripción: Proporciona un desglose de todos los pagos realizados por --seguro para una factura concreta (ej. Factura ID 12), mostrando el monto --cubierto y la fecha del pago.
---Resultado Esperado: Los detalles de los pagos de seguro para la factura --especificada
+--========================================================================== 
+--Descripción: Proporciona un desglose de todos los pagos realizados por 
+--seguro para una factura concreta (ej. Factura ID 12), mostrando el monto 
+--cubierto y la fecha del pago.
+--Resultado Esperado: Los detalles de los pagos de seguro para la factura 
+--especificada
 --==========================================================================
 
 SELECT
@@ -477,11 +582,15 @@ JOIN Afiliacion_Seguro ASG ON PS.id_afiliacion = ASG.id_afiliacion
 JOIN Aseguradora ASE ON ASG.id_aseguradora = ASE.id_aseguradora
 WHERE F.id_factura = 12
 ORDER BY PS.fecha_pago;
+
 --========================================================================== 
 --PRUEBA 8.5: Eventos clínicos y los insumos usados en ellos
 --==========================================================================
---Descripción: Lista todos los eventos clínicos, junto con el paciente y --médico involucrados, y cualquier insumo médico que haya sido registrado --como usado en dicho evento.
---Resultado Esperado: Un reporte completo de eventos clínicos y el uso de --insumos.
+--Descripción: Lista todos los eventos clínicos, junto con el paciente y 
+--médico involucrados, y cualquier insumo médico que haya sido registrado 
+--como usado en dicho evento.
+--Resultado Esperado: Un reporte completo de eventos clínicos y el uso de 
+--insumos.
 --==========================================================================
 
 
@@ -505,7 +614,8 @@ ORDER BY EC.id_evento, IM.nombre;
 --==========================================================================
 --PRUEBA 8.6: Encargos y su estado, incluyendo los ítems pedidos
 --==========================================================================
---Descripción: Muestra un resumen de los encargos realizados a proveedores, --su estado actual y el detalle de los insumos solicitados en cada uno.
+--Descripción: Muestra un resumen de los encargos realizados a proveedores, 
+--su estado actual y el detalle de los insumos solicitados en cada uno.
 --Resultado Esperado: Un listado de encargos con sus detalles.
 --==========================================================================
 
@@ -527,10 +637,13 @@ JOIN Encargo_Detalle ED ON E.id_encargo = ED.id_encargo
 JOIN Insumo_Medico IM ON ED.id_insumo = IM.id_insumo
 ORDER BY E.id_encargo, IM.nombre;
 
---=========================================================================  PRUEBA 8.7: Personal y sus horarios de trabajo
+--=========================================================================  
+--PRUEBA 8.7: Personal y sus horarios de trabajo
 --==========================================================================
---Descripción: Obtiene los horarios de trabajo específicos para algunos --miembros del personal (ejemplo para Carlos Rodriguez y María González).
---Resultado Esperado: Los días y horas de entrada y salida para el personal --especificado.
+--Descripción: Obtiene los horarios de trabajo específicos para algunos 
+--miembros del personal (ejemplo para Carlos Rodriguez y María González).
+--Resultado Esperado: Los días y horas de entrada y salida para el personal 
+--especificado.
 --==========================================================================
 
 SELECT
@@ -547,7 +660,8 @@ ORDER BY P.apellido, HT.dia_semana;
 --==========================================================================
 --PRUEBA 8.8: Pacientes sin afiliación de seguro
 --==========================================================================
---Descripción: Identifica a todos los pacientes que no tienen ninguna --afiliación de seguro registrada en la base de datos.
+--Descripción: Identifica a todos los pacientes que no tienen ninguna 
+--afiliación de seguro registrada en la base de datos.
 --Resultado Esperado: Una lista de pacientes sin seguro.
 --========================================================================== 
 
@@ -561,75 +675,226 @@ LEFT JOIN Afiliacion_Seguro ASG ON P.ci_paciente = ASG.ci_paciente
 WHERE ASG.id_afiliacion IS NULL;
 
 --==========================================================================
--- PRUEBA 8.9: Insumos con stock bajo el mínimo
---========================================================================== 
---Descripción: Identifica todos los insumos médicos cuyo stock actual está por 
--- debajo del stock mínimo establecido, agrupados por hospital. Esta consulta es 
--- crítica para la gestión de inventarios y reabastecimiento.
--- Resultado Esperado: Lista de insumos que necesitan reabastecimiento urgente,
--- con información del déficit.
+--PRUEBA 8.9: Insumos con stock bajo el mínimo
+--==========================================================================
+--Descripción: Identifica todos los insumos médicos cuyo stock actual está 
+--por debajo del stock mínimo establecido, agrupados por hospital.
+--Resultado Esperado: Lista de insumos que necesitan reabastecimiento urgente.
 --==========================================================================
 
--- Consulta principal de insumos bajo mínimo
-SELECT 
+SELECT
     H.nombre AS hospital,
     IM.nombre AS insumo,
-    IM.tipo AS tipo_insumo,
-    INV.cantidad AS stock_actual,
-    INV.stock_minimo,
-    (INV.stock_minimo - INV.cantidad) AS unidades_faltantes,
-    CASE 
-        WHEN INV.cantidad = 0 THEN 'SIN STOCK'
-        WHEN INV.cantidad < INV.stock_minimo * 0.5 THEN 'CRÍTICO'
-        ELSE 'BAJO'
-    END AS nivel_urgencia
+    INV.cantidad,
+    INV.stock_minimo
 FROM Inventario INV
 JOIN Hospital H ON INV.id_hospital = H.id_hospital
 JOIN Insumo_Medico IM ON INV.id_insumo = IM.id_insumo
-WHERE INV.cantidad < INV.stock_minimo
-ORDER BY H.nombre, nivel_urgencia DESC, unidades_faltantes DESC;
+WHERE INV.cantidad <= INV.stock_minimo
+ORDER BY H.nombre, IM.nombre;
 
--- Resumen por hospital del estado de inventario
-SELECT 
+--==========================================================================
+--PRUEBA 8.10: Habitaciones disponibles por tipo y hospital
+--==========================================================================
+--Descripción: Lista las habitaciones que no están ocupadas, agrupadas por tipo de habitación y hospital, para mostrar la disponibilidad.
+--Resultado Esperado: Un listado de habitaciones disponibles.
+--==========================================================================
+SELECT
     H.nombre AS hospital,
-    COUNT(CASE WHEN INV.cantidad < INV.stock_minimo THEN 1 END) AS insumos_bajo_minimo,
-    COUNT(CASE WHEN INV.cantidad = 0 THEN 1 END) AS insumos_sin_stock,
-    COUNT(*) AS total_insumos,
-    ROUND(
-        COUNT(CASE WHEN INV.cantidad < INV.stock_minimo THEN 1 END)::NUMERIC / 
-        COUNT(*)::NUMERIC * 100, 2
-    ) AS porcentaje_bajo_minimo
-FROM Inventario INV
-JOIN Hospital H ON INV.id_hospital = H.id_hospital
-GROUP BY H.id_hospital, H.nombre
-ORDER BY porcentaje_bajo_minimo DESC;
+    HR.numero_habitacion,
+    HR.tipo AS tipo_habitacion,
+    HR.num_camas,
+    HR.tarifa_dia
+FROM Habitacion HR
+JOIN Hospital H ON HR.id_hospital = H.id_hospital
+WHERE HR.ocupada = FALSE
+ORDER BY H.nombre, HR.tipo, HR.numero_habitacion;
 
--- Insumos críticos que necesitan encargo inmediato (0 stock o menos del 20% del mínimo)
-SELECT 
+--==========================================================================
+--PRUEBA 8.11: Proveedores y los insumos que suministran
+--==========================================================================
+--Descripción: Muestra cada proveedor y los insumos médicos específicos que suministran, incluyendo el precio unitario de cada insumo.
+--Resultado Esperado: Una relación entre proveedores y los insumos que ofrecen.
+--==========================================================================
+SELECT
+    PR.nombre_empresa AS proveedor_nombre,
+    IM.nombre AS insumo_suministrado,
+    PS.precio_unitario
+FROM Proveedor_Suministra PS
+JOIN Proveedor PR ON PS.id_proveedor = PR.id_proveedor
+JOIN Insumo_Medico IM ON PS.id_insumo = IM.id_insumo
+ORDER BY PR.nombre_empresa, IM.nombre;
+
+--==========================================================================
+--PRUEBA 8.12: Teléfonos de los departamentos
+--==========================================================================
+--Descripción: Lista cada departamento y todos los números de teléfono asociados a él.
+--Resultado Esperado: Una lista de departamentos con sus teléfonos.
+--==========================================================================
+SELECT
+    H.nombre AS hospital_nombre,
+    D.nombre AS departamento_nombre,
+    TD.telefono
+FROM Telefono_Departamento TD
+JOIN Departamento D ON TD.id_hospital = D.id_hospital AND TD.numero_departamento = D.numero_departamento
+JOIN Hospital H ON D.id_hospital = H.id_hospital
+ORDER BY H.nombre, D.nombre;
+
+--==========================================================================
+--PRUEBA 8.13: Historial médico de un paciente específico
+--==========================================================================
+--Descripción: Recupera todos los registros del historial médico para un paciente dado (ej. Paciente 'V-10000001').
+--Resultado Esperado: El historial médico completo del paciente.
+--==========================================================================
+SELECT
+    P.nombre AS paciente_nombre,
+    P.apellido AS paciente_apellido,
+    HM.fecha,
+    HM.tipo,
+    HM.descripcion
+FROM Historial_Medico HM
+JOIN Paciente P ON HM.ci_paciente = P.ci_paciente
+WHERE P.ci_paciente = 'V-10000001'
+ORDER BY HM.fecha DESC;
+
+--==========================================================================
+--PRUEBA 8.14: Ingresos totales por hospital
+--==========================================================================
+--Descripción: Calcula el monto total (suma de los total de las facturas) generado por cada hospital.
+--Resultado Esperado: El ingreso total para cada hospital.
+--==========================================================================
+SELECT
+    H.nombre AS hospital_nombre,
+    SUM(F.total) AS ingresos_totales
+FROM Factura F
+JOIN Evento_Clinico EC ON F.id_evento = EC.id_evento
+JOIN Hospital H ON EC.id_hospital = H.id_hospital
+WHERE F.estado = 'Pagada' -- Considerar solo facturas pagadas
+GROUP BY H.nombre
+ORDER BY ingresos_totales DESC;
+
+--==========================================================================
+--PRUEBA 8.15: Conteo de eventos clínicos por tipo y médico
+--==========================================================================
+--Descripción: Cuenta la cantidad de cada tipo de evento clínico (Consulta, Operación, Procedimiento) realizado por cada médico.
+--Resultado Esperado: Un desglose de la carga de trabajo por tipo de evento para cada médico.
+--==========================================================================
+
+
+SELECT
+    P.nombre AS medico_nombre,
+    P.apellido AS medico_apellido,
+    EC.tipo AS tipo_evento,
+    COUNT(EC.id_evento) AS total_eventos
+FROM Evento_Clinico EC
+JOIN Personal P ON EC.ci_medico = P.ci_personal
+GROUP BY P.nombre, P.apellido, EC.tipo
+ORDER BY P.apellido, EC.tipo;
+
+--==========================================================================
+--PRUEBA 8.16: Insumos con cantidad actual por debajo del stock mínimo
+--==========================================================================
+--Descripción: Identifica los insumos en cada hospital cuya cantidad en inventario es igual o inferior a su stock mínimo.
+--Resultado Esperado: Una lista de insumos que necesitan ser reabastecidos.
+--==========================================================================
+SELECT
     H.nombre AS hospital,
     IM.nombre AS insumo,
-    IM.descripcion,
-    INV.cantidad AS stock_actual,
-    INV.stock_minimo,
-    P.nombre_empresa AS proveedor_sugerido,
-    PS.precio_unitario AS precio_ultima_compra
+    INV.cantidad,
+    INV.stock_minimo
 FROM Inventario INV
 JOIN Hospital H ON INV.id_hospital = H.id_hospital
 JOIN Insumo_Medico IM ON INV.id_insumo = IM.id_insumo
-LEFT JOIN (
-    -- Obtener el último proveedor usado para cada insumo
-    SELECT DISTINCT ON (ed.id_insumo) 
-        ed.id_insumo, 
-        e.id_proveedor,
-        ed.precio_unitario
-    FROM Encargo_Detalle ed
-    JOIN Encargo e ON ed.id_encargo = e.id_encargo
-    ORDER BY ed.id_insumo, e.fecha_encargo DESC
-) AS ultima_compra ON IM.id_insumo = ultima_compra.id_insumo
-LEFT JOIN Proveedor P ON ultima_compra.id_proveedor = P.id_proveedor
-LEFT JOIN Proveedor_Suministra PS ON IM.id_insumo = PS.id_insumo AND P.id_proveedor = PS.id_proveedor
-WHERE INV.cantidad <= INV.stock_minimo * 0.2
-ORDER BY H.nombre, INV.cantidad ASC;
+WHERE INV.cantidad <= INV.stock_minimo
+ORDER BY H.nombre, IM.nombre;
+
+--==========================================================================
+--PRUEBA 8.17: Eventos clínicos por paciente en un rango de fechas
+--==========================================================================
+--Descripción: Muestra todos los eventos clínicos de un paciente específico dentro de un rango de fechas dado.
+--Resultado Esperado: Los eventos del paciente en el periodo.
+--==========================================================================
+SELECT
+    P.nombre AS paciente_nombre,
+    P.apellido AS paciente_apellido,
+    EC.tipo,
+    EC.fecha,
+    EC.hora,
+    EC.descripcion,
+    EC.costo
+FROM Evento_Clinico EC
+JOIN Paciente P ON EC.ci_paciente = P.ci_paciente
+WHERE P.ci_paciente = 'V-10000001'
+  AND EC.fecha BETWEEN '2025-01-01' AND '2025-03-31'
+ORDER BY EC.fecha, EC.hora;
+
+--==========================================================================
+--PRUEBA 8.18: Total facturado por aseguradora
+--==========================================================================
+--Descripción: Calcula el monto total facturado que ha sido pagado por cada aseguradora.
+--Resultado Esperado: El total pagado por cada aseguradora.
+--==========================================================================
+SELECT
+    A.nombre AS aseguradora_nombre,
+    SUM(PS.monto_cubierto) AS total_pagado_por_seguro
+FROM Pago_Seguro PS
+JOIN Afiliacion_Seguro AF ON PS.id_afiliacion = AF.id_afiliacion
+JOIN Aseguradora A ON AF.id_aseguradora = A.id_aseguradora
+GROUP BY A.nombre
+ORDER BY total_pagado_por_seguro DESC;
+
+--==========================================================================
+--PRUEBA 8.19: Personal administrativo por hospital y departamento
+--==========================================================================
+--Descripción: Lista todo el personal de tipo 'Administrativo' y el hospital/departamento al que están asignados.
+--Resultado Esperado: Un listado de personal administrativo con su ubicación.
+--==========================================================================
+SELECT
+    P.nombre,
+    P.apellido,
+    H.nombre AS hospital_asignado,
+    D.nombre AS departamento_asignado,
+    P.salario
+FROM Personal P
+LEFT JOIN Hospital H ON P.id_hospital_actual = H.id_hospital
+LEFT JOIN Departamento D ON P.id_hospital_actual = D.id_hospital AND P.numero_departamento_actual = D.numero_departamento
+WHERE P.tipo = 'Administrativo'
+ORDER BY H.nombre, D.nombre, P.apellido;
+
+--==========================================================================
+--PRUEBA 8.20: Número de habitaciones y camas por departamento
+--==========================================================================
+--Descripción: Cuenta el número de habitaciones y el total de camas para cada departamento en cada hospital.
+--Resultado Esperado: El conteo de habitaciones y camas por departamento.
+--==========================================================================
+SELECT
+    H.nombre AS hospital_nombre,
+    D.nombre AS departamento_nombre,
+    COUNT(HR.id_habitacion) AS total_habitaciones,
+    SUM(HR.num_camas) AS total_camas_departamento
+FROM Departamento D
+JOIN Hospital H ON D.id_hospital = H.id_hospital
+LEFT JOIN Habitacion HR ON D.id_hospital = HR.id_hospital AND D.numero_departamento = HR.numero_departamento
+GROUP BY H.nombre, D.nombre
+ORDER BY H.nombre, D.nombre;
+
+--==========================================================================
+--PRUEBA 8.21: Médicos por especialidad y hospital
+--==========================================================================
+--Descripción: Muestra los médicos, su especialidad y el hospital/departamento donde trabajan actualmente.
+--Resultado Esperado: Una lista de médicos con su información de especialidad y ubicación.
+--==========================================================================
+SELECT
+    P.nombre AS medico_nombre,
+    P.apellido AS medico_apellido,
+    P.especialidad,
+    H.nombre AS hospital_actual,
+    D.nombre AS departamento_actual
+FROM Personal P
+JOIN Hospital H ON P.id_hospital_actual = H.id_hospital
+JOIN Departamento D ON P.id_hospital_actual = D.id_hospital AND P.numero_departamento_actual = D.numero_departamento
+WHERE P.tipo = 'Medico'
+ORDER BY P.especialidad, P.apellido;
 
 --==========================================================================
 -- PRUEBA 9.1: ON DELETE CASCADE (Departamento -> Habitaciones)
@@ -705,209 +970,12 @@ SELECT COUNT(*) AS habs_despues FROM Habitacion WHERE id_hospital = currval('hos
 
 ROLLBACK;
 
-
-
-
-
-PRUEBA 8.9: Médicos por especialidad y hospital
-Descripción: Muestra los médicos, su especialidad y el hospital/departamento donde trabajan actualmente.
-Resultado Esperado: Una lista de médicos con su información de especialidad y ubicación.
-=============================================================================
-SELECT
-    P.nombre AS medico_nombre,
-    P.apellido AS medico_apellido,
-    P.especialidad,
-    H.nombre AS hospital_actual,
-    D.nombre AS departamento_actual
-FROM Personal P
-JOIN Hospital H ON P.id_hospital_actual = H.id_hospital
-JOIN Departamento D ON P.id_hospital_actual = D.id_hospital AND P.numero_departamento_actual = D.numero_departamento
-WHERE P.tipo = 'Medico'
-ORDER BY P.especialidad, P.apellido;
-=============================================================================
-
-PRUEBA 8.10: Habitaciones disponibles por tipo y hospital
-Descripción: Lista las habitaciones que no están ocupadas, agrupadas por tipo de habitación y hospital, para mostrar la disponibilidad.
-Resultado Esperado: Un listado de habitaciones disponibles.
-=============================================================================
-SELECT
-    H.nombre AS hospital,
-    HR.numero_habitacion,
-    HR.tipo AS tipo_habitacion,
-    HR.num_camas,
-    HR.tarifa_dia
-FROM Habitacion HR
-JOIN Hospital H ON HR.id_hospital = H.id_hospital
-WHERE HR.ocupada = FALSE
-ORDER BY H.nombre, HR.tipo, HR.numero_habitacion;
-============================================================================
-
-PRUEBA 8.11: Proveedores y los insumos que suministran
-Descripción: Muestra cada proveedor y los insumos médicos específicos que suministran, incluyendo el precio unitario de cada insumo.
-Resultado Esperado: Una relación entre proveedores y los insumos que ofrecen.
-============================================================================
-SELECT
-    PR.nombre_empresa AS proveedor_nombre,
-    IM.nombre AS insumo_suministrado,
-    PS.precio_unitario
-FROM Proveedor_Suministra PS
-JOIN Proveedor PR ON PS.id_proveedor = PR.id_proveedor
-JOIN Insumo_Medico IM ON PS.id_insumo = IM.id_insumo
-ORDER BY PR.nombre_empresa, IM.nombre;
-=============================================================================
-
-
-PRUEBA 8.12: Teléfonos de los departamentos
-Descripción: Lista cada departamento y todos los números de teléfono asociados a él.
-Resultado Esperado: Una lista de departamentos con sus teléfonos.
-============================================================================
-SELECT
-    H.nombre AS hospital_nombre,
-    D.nombre AS departamento_nombre,
-    TD.telefono
-FROM Telefono_Departamento TD
-JOIN Departamento D ON TD.id_hospital = D.id_hospital AND TD.numero_departamento = D.numero_departamento
-JOIN Hospital H ON D.id_hospital = H.id_hospital
-ORDER BY H.nombre, D.nombre;
-============================================================================
-
-PRUEBA 8.13: Historial médico de un paciente específico
-Descripción: Recupera todos los registros del historial médico para un paciente dado (ej. Paciente 'V-10000001').
-Resultado Esperado: El historial médico completo del paciente.
-============================================================================
-SELECT
-    P.nombre AS paciente_nombre,
-    P.apellido AS paciente_apellido,
-    HM.fecha,
-    HM.tipo,
-    HM.descripcion
-FROM Historial_Medico HM
-JOIN Paciente P ON HM.ci_paciente = P.ci_paciente
-WHERE P.ci_paciente = 'V-10000001'
-ORDER BY HM.fecha DESC;
-============================================================================
-
-PRUEBA 8.14: Ingresos totales por hospital
-Descripción: Calcula el monto total (suma de los total de las facturas) generado por cada hospital.
-Resultado Esperado: El ingreso total para cada hospital.
-============================================================================
-SELECT
-    H.nombre AS hospital_nombre,
-    SUM(F.total) AS ingresos_totales
-FROM Factura F
-JOIN Evento_Clinico EC ON F.id_evento = EC.id_evento
-JOIN Hospital H ON EC.id_hospital = H.id_hospital
-WHERE F.estado = 'Pagada' -- Considerar solo facturas pagadas
-GROUP BY H.nombre
-ORDER BY ingresos_totales DESC;
-===========================================================================
-
-PRUEBA 8.15: Conteo de eventos clínicos por tipo y médico
-Descripción: Cuenta la cantidad de cada tipo de evento clínico (Consulta, Operación, Procedimiento) realizado por cada médico.
-Resultado Esperado: Un desglose de la carga de trabajo por tipo de evento para cada médico.
-=============================================================================
-
-
-
-SELECT
-    P.nombre AS medico_nombre,
-    P.apellido AS medico_apellido,
-    EC.tipo AS tipo_evento,
-    COUNT(EC.id_evento) AS total_eventos
-FROM Evento_Clinico EC
-JOIN Personal P ON EC.ci_medico = P.ci_personal
-GROUP BY P.nombre, P.apellido, EC.tipo
-ORDER BY P.apellido, EC.tipo;
-=============================================================================
-
-PRUEBA 8.16: Insumos con cantidad actual por debajo del stock mínimo
-Descripción: Identifica los insumos en cada hospital cuya cantidad en inventario es igual o inferior a su stock mínimo.
-Resultado Esperado: Una lista de insumos que necesitan ser reabastecidos.
-=============================================================================
-SELECT
-    H.nombre AS hospital,
-    IM.nombre AS insumo,
-    INV.cantidad,
-    INV.stock_minimo
-FROM Inventario INV
-JOIN Hospital H ON INV.id_hospital = H.id_hospital
-JOIN Insumo_Medico IM ON INV.id_insumo = IM.id_insumo
-WHERE INV.cantidad <= INV.stock_minimo
-ORDER BY H.nombre, IM.nombre;
-=============================================================================
-
-PRUEBA 8.17: Eventos clínicos por paciente en un rango de fechas
-Descripción: Muestra todos los eventos clínicos de un paciente específico dentro de un rango de fechas dado.
-Resultado Esperado: Los eventos del paciente en el periodo.
-=============================================================================
-SELECT
-    P.nombre AS paciente_nombre,
-    P.apellido AS paciente_apellido,
-    EC.tipo,
-    EC.fecha,
-    EC.hora,
-    EC.descripcion,
-    EC.costo
-FROM Evento_Clinico EC
-JOIN Paciente P ON EC.ci_paciente = P.ci_paciente
-WHERE P.ci_paciente = 'V-10000001'
-  AND EC.fecha BETWEEN '2025-01-01' AND '2025-03-31'
-ORDER BY EC.fecha, EC.hora;
-=============================================================================
-
-
-PRUEBA 8.18: Total facturado por aseguradora
-Descripción: Calcula el monto total facturado que ha sido pagado por cada aseguradora.
-Resultado Esperado: El total pagado por cada aseguradora.
-=============================================================================
-SELECT
-    A.nombre AS aseguradora_nombre,
-    SUM(PS.monto_cubierto) AS total_pagado_por_seguro
-FROM Pago_Seguro PS
-JOIN Afiliacion_Seguro AF ON PS.id_afiliacion = AF.id_afiliacion
-JOIN Aseguradora A ON AF.id_aseguradora = A.id_aseguradora
-GROUP BY A.nombre
-ORDER BY total_pagado_por_seguro DESC;
-=============================================================================
-
-PRUEBA 8.19: Personal administrativo por hospital y departamento
-Descripción: Lista todo el personal de tipo 'Administrativo' y el hospital/departamento al que están asignados.
-Resultado Esperado: Un listado de personal administrativo con su ubicación.
-=============================================================================
-SELECT
-    P.nombre,
-    P.apellido,
-    H.nombre AS hospital_asignado,
-    D.nombre AS departamento_asignado,
-    P.salario
-FROM Personal P
-LEFT JOIN Hospital H ON P.id_hospital_actual = H.id_hospital
-LEFT JOIN Departamento D ON P.id_hospital_actual = D.id_hospital AND P.numero_departamento_actual = D.numero_departamento
-WHERE P.tipo = 'Administrativo'
-ORDER BY H.nombre, D.nombre, P.apellido;
-=============================================================================
-
-PRUEBA 8.20: Número de habitaciones y camas por departamento
-Descripción: Cuenta el número de habitaciones y el total de camas para cada departamento en cada hospital.
-Resultado Esperado: El conteo de habitaciones y camas por departamento.
-=============================================================================
-SELECT
-    H.nombre AS hospital_nombre,
-    D.nombre AS departamento_nombre,
-    COUNT(HR.id_habitacion) AS total_habitaciones,
-    SUM(HR.num_camas) AS total_camas_departamento
-FROM Departamento D
-JOIN Hospital H ON D.id_hospital = H.id_hospital
-LEFT JOIN Habitacion HR ON D.id_hospital = HR.id_hospital AND D.numero_departamento = HR.numero_departamento
-GROUP BY H.nombre, D.nombre
-ORDER BY H.nombre, D.nombre;
-=============================================================================
-
-
-PRUEBA 9.1: Actualizar la dirección de un hospital
-Descripción: Cambia la dirección de un hospital existente.
-Resultado Esperado: La dirección del Hospital Central (ID 1) se actualizará.
-=============================================================================
+--==========================================================================
+--PRUEBA 10.1: Actualizar la dirección de un hospital
+--==========================================================================
+--Descripción: Cambia la dirección de un hospital existente.
+--Resultado Esperado: La dirección del Hospital Central (ID 1) se actualizará.
+--==========================================================================
 -- Antes de la actualización
 SELECT id_hospital, nombre, direccion FROM Hospital WHERE id_hospital = 1;
 
@@ -921,12 +989,13 @@ SELECT id_hospital, nombre, direccion FROM Hospital WHERE id_hospital = 1;
 
 -- Limpiar cambios
 ROLLBACK;
-=============================================================================
 
-PRUEBA 9.2: Actualizar el nombre de un departamento
-Descripción: Modifica el nombre de un departamento específico.
-Resultado Esperado: El nombre del departamento de Cardiología del Hospital Central (ID 1, Depto. 2) se actualizará.
-=============================================================================
+--==========================================================================
+--PRUEBA 10.2: Actualizar el nombre de un departamento
+--==========================================================================
+--Descripción: Modifica el nombre de un departamento específico.
+--Resultado Esperado: El nombre del departamento de Cardiología del Hospital Central (ID 1, Depto. 2) se actualizará.
+--==========================================================================
 -- Antes de la actualización
 SELECT id_hospital, numero_departamento, nombre FROM Departamento WHERE id_hospital = 1 AND numero_departamento = 2;
 
@@ -940,11 +1009,13 @@ SELECT id_hospital, numero_departamento, nombre FROM Departamento WHERE id_hospi
 
 -- Limpiar cambios
 ROLLBACK;
-============================================================================
 
-PRUEBA 9.3: Actualizar la tarifa diaria de una habitación y su estado de ocupación
-Descripción: Cambia la tarifa y el estado de ocupación de una habitación.
-Resultado Esperado: La tarifa y el estado de la habitación '201' del Hospital Central (ID 1) se actualizarán.
+--==========================================================================
+--PRUEBA 10.3: Actualizar la tarifa diaria de una habitación y su estado de ocupación
+--==========================================================================
+--Descripción: Cambia la tarifa y el estado de ocupación de una habitación.
+--Resultado Esperado: La tarifa y el estado de la habitación '201' del Hospital Central (ID 1) se actualizarán.
+--==========================================================================
 
 -- Antes de la actualización
 SELECT id_habitacion, numero_habitacion, tarifa_dia, ocupada FROM Habitacion WHERE id_habitacion = 3; -- Habitacion '201' de Hospital 1
@@ -962,10 +1033,12 @@ ROLLBACK;
 
 
 
--- PRUEBA 9.4: Aumentar el salario de un médico
+--==========================================================================
+-- PRUEBA 10.4: Aumentar el salario de un médico
+--==========================================================================
 -- Descripción: Incrementa el salario de un médico específico.
 -- Resultado Esperado: El salario del Dr. Carlos Rodriguez (CI 'V-12345678') se actualizará.
---=======================================================================
+--==========================================================================
 -- Antes de la actualización
 SELECT ci_personal, nombre, apellido, salario FROM Personal WHERE ci_personal = 'V-12345678';
 
@@ -979,12 +1052,13 @@ SELECT ci_personal, nombre, apellido, salario FROM Personal WHERE ci_personal = 
 
 -- Limpiar cambios
 ROLLBACK;
---=========================================================================
 
-
--- PRUEBA 9.5: Actualizar el teléfono de un paciente
--- Descripción: Modifica el número de teléfono de un paciente. 
-Resultado Esperado: El teléfono del paciente Juan Pérez (CI 'V-10000001') se actualizará.
+--==========================================================================
+-- PRUEBA 10.5: Actualizar el teléfono de un paciente
+--==========================================================================
+-- Descripción: Modifica el número de teléfono de un paciente.
+-- Resultado Esperado: El teléfono del paciente Juan Pérez (CI 'V-10000001') se actualizará.
+--==========================================================================
 
 -- Antes de la actualización
 SELECT ci_paciente, nombre, apellido, telefono FROM Paciente WHERE ci_paciente = 'V-10000001';
@@ -1001,9 +1075,12 @@ SELECT ci_paciente, nombre, apellido, telefono FROM Paciente WHERE ci_paciente =
 ROLLBACK;
 
 
--- PRUEBA 9.6: Actualizar el teléfono de una aseguradora
+--==========================================================================
+-- PRUEBA 10.6: Actualizar el teléfono de una aseguradora
+--==========================================================================
 -- Descripción: Modifica el número de teléfono de una aseguradora.
 -- Resultado Esperado: El teléfono de Seguros Caracas (ID 1) se actualizará.
+--==========================================================================
 
 -- Antes de la actualización
 SELECT id_aseguradora, nombre, telefono FROM Aseguradora WHERE id_aseguradora = 1;
@@ -1020,9 +1097,12 @@ SELECT id_aseguradora, nombre, telefono FROM Aseguradora WHERE id_aseguradora = 
 ROLLBACK;
 
 
--- PRUEBA 9.7: Actualizar la descripción de un insumo médico
+--==========================================================================
+-- PRUEBA 10.7: Actualizar la descripción de un insumo médico
+--==========================================================================
 -- Descripción: Cambia la descripción de un insumo médico.
 -- Resultado Esperado: La descripción de Paracetamol 500mg (ID 1) se actualizará.
+--==========================================================================
 
 -- Antes de la actualización
 SELECT id_insumo, nombre, descripcion FROM Insumo_Medico WHERE id_insumo = 1;
@@ -1038,10 +1118,12 @@ SELECT id_insumo, nombre, descripcion FROM Insumo_Medico WHERE id_insumo = 1;
 -- Limpiar cambios
 ROLLBACK;
 
-
--- PRUEBA 9.8: Actualizar el precio unitario de un insumo suministrado por un proveedor
+--==========================================================================
+-- PRUEBA 10.8: Actualizar el precio unitario de un insumo suministrado por un proveedor
+--==========================================================================
 -- Descripción: Modifica el precio al que un proveedor suministra un insumo específico.
 -- Resultado Esperado: El precio unitario del Paracetamol (ID 1) suministrado por Distribuidora Médica Central (ID 1) se actualizará.
+--==========================================================================
 
 -- Antes de la actualización
 SELECT id_proveedor, id_insumo, precio_unitario FROM Proveedor_Suministra WHERE id_proveedor = 1 AND id_insumo = 1;
@@ -1057,11 +1139,12 @@ SELECT id_proveedor, id_insumo, precio_unitario FROM Proveedor_Suministra WHERE 
 -- Limpiar cambios
 ROLLBACK;
 
-
-
--- PRUEBA 9.9: Actualizar el stock mínimo de un insumo en el inventario de un hospital
+--==========================================================================
+-- PRUEBA 10.9: Actualizar el stock mínimo de un insumo en el inventario de un hospital
+--==========================================================================
 -- Descripción: Ajusta el nivel de stock mínimo para un insumo en un hospital.
 -- Resultado Esperado: El stock mínimo de Paracetamol (ID 1) en el Hospital Central (ID 1) se actualizará.
+--==========================================================================
 
 -- Antes de la actualización
 SELECT id_hospital, id_insumo, stock_minimo FROM Inventario WHERE id_hospital = 1 AND id_insumo = 1;
@@ -1077,13 +1160,13 @@ SELECT id_hospital, id_insumo, stock_minimo FROM Inventario WHERE id_hospital = 
 -- Limpiar cambios
 ROLLBACK;
 
-
-
-
--- PRUEBA 9.10: Cambiar el estado de un encargo pendiente a cancelado
+--==========================================================================
+-- PRUEBA 10.10: Cambiar el estado de un encargo pendiente a cancelado
+--==========================================================================
 -- Descripción: Modifica el estado de un encargo que estaba pendiente a cancelado.
 -- Resultado Esperado: El estado del encargo ID 8 cambiará a 'Cancelado'.
 -- Nota: Este cambio NO activará el trigger de inventario trg_recepcion_encargo porque el estado no cambia a 'Recibido'.
+--==========================================================================
 
 -- Antes de la actualización
 SELECT id_encargo, estado FROM Encargo WHERE id_encargo = 8;
@@ -1099,10 +1182,12 @@ SELECT id_encargo, estado FROM Encargo WHERE id_encargo = 8;
 -- Limpiar cambios
 ROLLBACK;
 
-
--- PRUEBA 9.11: Actualizar las observaciones de un evento clínico
+--==========================================================================
+-- PRUEBA 10.11: Actualizar las observaciones de un evento clínico
+--==========================================================================
 -- Descripción: Agrega o modifica las observaciones de un evento clínico.
 -- Resultado Esperado: Las observaciones del evento clínico ID 1 se actualizarán.
+--==========================================================================
 
 -- Antes de la actualización
 SELECT id_evento, descripcion, observaciones FROM Evento_Clinico WHERE id_evento = 1;
