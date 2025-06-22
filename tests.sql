@@ -9,33 +9,37 @@
 --==========================================================================
 
 -- Antes de la inserción:
-SELECT id_hospital, nombre, num_camas FROM Hospital;
+SELECT id_hospital, nombre, num_camas FROM Hospital LIMIT 4;
 -- Calcule las camas iniciales para referencia:
--- Hospital Central (ID 1): 1+2+1+1+2+2+1+1 = 11 camas
--- Hospital Universitario (ID 2): 1+2+1+1+2+2+1+1 = 11 camas
--- Clínica Santa María (ID 3): 1+1+1+2+1+1+1+1 = 9 camas
--- Hospital Regional (ID 4): 2+2+1+1+1+1+2+2 = 12 camas
+-- Hospital Central (ID 1): = 20 camas
+-- Hospital Universitario (ID 2): = 20 camas
+-- Clínica Santa María (ID 3): = 19 camas
+-- Hospital Regional (ID 4): = 21 camas
 
 
 -- Insertar nuevas habitaciones
 INSERT INTO Habitacion (id_hospital, numero_departamento, numero_habitacion, tipo, num_camas, tarifa_dia, ocupada) VALUES
-(1, 1, '103', 'Individual', 1, 160.00, FALSE), -- Hospital 1: +1 cama
+(1, 1, '104', 'Individual', 1, 160.00, FALSE), -- Hospital 1: +1 cama
 (2, 5, '305', 'Doble', 2, 230.00, FALSE), -- Hospital 2: +2 camas
-(3, 1, '103', 'Individual', 1, 200.00, TRUE), -- Hospital 3: +1 cama
-(4, 1, '103', 'Individual', 1, 180.00, FALSE); -- Hospital 4: +1 cama
+(3, 1, '104', 'Individual', 1, 200.00, TRUE), -- Hospital 3: +1 cama
+(4, 1, '104', 'Individual', 1, 180.00, FALSE); -- Hospital 4: +1 cama
 
 -- Después de la inserción:
-SELECT id_hospital, nombre, num_camas FROM Hospital;
--- Hospital Central debería tener 12 camas (11 + 1)
--- Hospital Universitario debería tener 13 camas (11 + 2)
--- Clínica Santa María debería tener 10 camas (9 + 1)
--- Hospital Regional debería tener 13 camas (12 + 1)
+SELECT id_hospital, nombre, num_camas FROM Hospital LIMIT 4;
+-- Hospital Central debería tener 12 camas (20 + 1)
+-- Hospital Universitario debería tener 13 camas (20 + 2)
+-- Clínica Santa María debería tener 10 camas (19 + 1)
+-- Hospital Regional debería tener 13 camas (21 + 1)
+
+-- olvide poner esto antes xd
+ROLLBACK;
 
 --==========================================================================
 --PRUEBA 3.2: Actualización de Habitaciones
 --========================================================================== 
 --Descripción: Modificar el número de camas de una habitación existente y --verificar el impacto en el hospital.
---Resultado Esperado: El num_camas del Hospital 1 debería ajustarse --correctamente. Si la '101' del Hospital Central pasa de 1 a 2 camas, el --total de camas del Hospital Central debería ser 13 (12 + (2-1)).
+--Resultado Esperado: El num_camas del Hospital 1 debería ajustarse --correctamente. Si la '101' del Hospital Central pasa de 1 a 2 camas, el 
+--total de camas del Hospital Central debería ser 21 (20 + (2-1)).
 --========================================================================== 
 
 -- Antes de la actualización:
@@ -48,6 +52,9 @@ UPDATE Habitacion SET num_camas = 2 WHERE numero_habitacion = '101' AND id_hospi
 -- Después de la actualización:
 SELECT id_hospital, nombre, num_camas FROM Hospital WHERE id_hospital = 1;
 SELECT numero_habitacion, num_camas FROM Habitacion WHERE numero_habitacion = '101' AND id_hospital = 1;
+
+-- Limpiar cambios
+ROLLBACK;
 
 --==========================================================================
 --==========================================================================
@@ -68,63 +75,86 @@ DELETE FROM Habitacion WHERE numero_habitacion = '102' AND id_hospital = 1;
 SELECT id_hospital, nombre, num_camas FROM Hospital WHERE id_hospital = 1;
 SELECT numero_habitacion, num_camas FROM Habitacion WHERE numero_habitacion = '102' AND id_hospital = 1; -- Debería no retornar filas
 
+-- Limpiar cambios
+ROLLBACK;
+
 
 --==========================================================================
 --PRUEBA 4.1: Uso exitoso de insumo
 --==========================================================================
 --Descripción: Registrar el uso de un insumo que tiene stock suficiente.
---Resultado Esperado: La cantidad del insumo en Inventario debe disminuir en --la cantidad usada.
+--Resultado Esperado: La cantidad del insumo en Inventario debe disminuir en 
+--la cantidad usada.
 --========================================================================== 
 
--- Antes del uso (ejemplo con Insumo ID 1 - Paracetamol en Hospital 1):
-SELECT I.nombre, INV.cantidad FROM Inventario INV JOIN Insumo_Medico I ON INV.id_insumo = I.id_insumo WHERE INV.id_hospital = 1 AND INV.id_insumo = 1;
+-- Antes del uso (ejemplo con Insumo ID 1 - Paracetamol en Hospital 5):
+SELECT I.nombre, INV.cantidad FROM Inventario INV JOIN Insumo_Medico I ON INV.id_insumo = I.id_insumo WHERE INV.id_hospital = 5 AND INV.id_insumo IN (1, 12);
 -- Cantidad inicial: 100
 
--- Registrar uso de insumos para el Evento_Clinico con id_evento = 11 (Cateterismo cardíaco en Hospital Central)
-INSERT INTO Evento_Usa_Insumo (id_evento, id_insumo, cantidad) VALUES (11, 1, 10); -- Usar 10 Paracetamol (ID 1)
-INSERT INTO Evento_Usa_Insumo (id_evento, id_insumo, cantidad) VALUES (12, 12, 2); -- Usar 2 Guantes látex M (ID 12)
+-- Registrar uso de insumos para eventos de consulta (sin uso previo registrado)
+INSERT INTO Evento_Usa_Insumo (id_evento, id_insumo, cantidad) VALUES (1, 1, 10); -- Usar 10 Paracetamol (ID 1) en consulta cardiológica
+INSERT INTO Evento_Usa_Insumo (id_evento, id_insumo, cantidad) VALUES (2, 12, 2); -- Usar 2 Guantes látex M (ID 12) en control pediátrico
 
 -- Después del uso:
-SELECT I.nombre, INV.cantidad FROM Inventario INV JOIN Insumo_Medico I ON INV.id_insumo = I.id_insumo WHERE INV.id_hospital = 1 AND INV.id_insumo IN (1, 12);
+SELECT I.nombre, INV.cantidad FROM Inventario INV JOIN Insumo_Medico I ON INV.id_insumo = I.id_insumo WHERE INV.id_hospital = 5 AND INV.id_insumo IN (1, 12);
 -- Se espera que Paracetamol (ID 1) sea 90 y Guantes látex M (ID 12) sea 148.
+
+-- Limpiar cambios
+ROLLBACK;
 
 --==========================================================================
 --PRUEBA 4.2: Uso de insumo con stock insuficiente (ERROR esperado)
 --==========================================================================
 --Descripción: Intentar registrar el uso de un insumo en una cantidad mayor --a la disponible en el inventario.
---Resultado Esperado: La inserción debe fallar con el mensaje de error --"Stock insuficiente del insumo ID X en el hospital ID Y".
+--Resultado Esperado: La inserción debe fallar con el mensaje de error 
+--"Stock insuficiente del insumo ID X en el hospital ID Y".
 --==========================================================================
 
--- Antes del intento de uso (ejemplo con Insumo ID 1 - Paracetamol en Hospital 1):
-SELECT I.nombre, INV.cantidad FROM Inventario INV JOIN Insumo_Medico I ON INV.id_insumo = I.id_insumo WHERE INV.id_hospital = 1 AND INV.id_insumo = 1;
--- Cantidad actual: 90
+-- Antes del intento de uso (ejemplo con Insumo ID 2 - Ibuprofeno en Hospital 5):
+SELECT I.nombre, INV.cantidad FROM Inventario INV JOIN Insumo_Medico I ON INV.id_insumo = I.id_insumo WHERE INV.id_hospital = 5 AND INV.id_insumo = 2;
+-- Cantidad actual: 70
 
--- Intentar usar más de lo que hay (ej: 1000 Paracetamol, cuando solo hay 90)
--- ESTA INSERCIÓN DEBERÍA FALLAR
-INSERT INTO Evento_Usa_Insumo (id_evento, id_insumo, cantidad) VALUES (11, 1, 1000);
+-- Intentar usar más de lo que hay (ej: 1000 Ibuprofeno, cuando solo hay 70)
+-- ESTA INSERCIÓN DEBERÍA FALLAR - Usando evento 1 con insumo 2 para evitar duplicado
+INSERT INTO Evento_Usa_Insumo (id_evento, id_insumo, cantidad) VALUES (1, 2, 1000);
 
 -- Verificar que la cantidad no ha cambiado (si la inserción falla, no hay cambio)
-SELECT I.nombre, INV.cantidad FROM Inventario INV JOIN Insumo_Medico I ON INV.id_insumo = I.id_insumo WHERE INV.id_hospital = 1 AND INV.id_insumo = 1;
+SELECT I.nombre, INV.cantidad FROM Inventario INV JOIN Insumo_Medico I ON INV.id_insumo = I.id_insumo WHERE INV.id_hospital = 5 AND INV.id_insumo = 2;
+
+-- Limpiar cualquier transacción abierta
+ROLLBACK;
 
 --==========================================================================
 --PRUEBA 4.3: Uso de insumo no existente en el inventario (ERROR esperado)
 --==========================================================================
---Descripción: Intentar registrar el uso de un insumo que no está en el --inventario del hospital especificado.
---Resultado Esperado: La inserción debe fallar con el mensaje de error --"Stock insuficiente del insumo ID X en el hospital ID Y" (ya que la --v_cantidad_actual sería NULL).
+--Descripción: Intentar registrar el uso de un insumo que no está en el 
+--inventario del hospital especificado.
+--Resultado Esperado: La inserción debe fallar con el mensaje de error 
+--"Stock insuficiente del insumo ID X en el hospital ID Y" (ya que la 
+--v_cantidad_actual sería NULL).
 --==========================================================================
--- Intentar usar un insumo que no existe en el inventario del Hospital 1 (ej: Insumo ID 999)
+
+-- Temporalmente eliminar un insumo del inventario del Hospital 1 para la prueba
+DELETE FROM Inventario WHERE id_hospital = 1 AND id_insumo = 15;
+
+-- Verificar que el insumo ya no está en el inventario
+SELECT I.nombre, INV.cantidad FROM Inventario INV 
+RIGHT JOIN Insumo_Medico I ON INV.id_insumo = I.id_insumo 
+WHERE I.id_insumo = 15 AND (INV.id_hospital = 1 OR INV.id_hospital IS NULL);
+
+-- Intentar usar un insumo que no está en el inventario del Hospital 1 (Mascarillas N95)
 -- ESTA INSERCIÓN DEBERÍA FALLAR
-INSERT INTO Evento_Usa_Insumo (id_evento, id_insumo, cantidad) VALUES (11, 999, 1);
+INSERT INTO Evento_Usa_Insumo (id_evento, id_insumo, cantidad) VALUES (11, 15, 1);
 
-
-
-
+-- Limpiar cualquier transacción abierta (esto restaurará el inventario eliminado)
+ROLLBACK;
 
 --==========================================================================
 --PRUEBA 5.1: Recepción de un encargo pendiente (UPDATE si ya existe)
 --==========================================================================
 --Descripción: Actualizar el estado de un encargo pendiente a 'Recibido'.
---Resultado Esperado: La cantidad de los insumos en Inventario debe --incrementarse según el detalle del encargo.
+--Resultado Esperado: La cantidad de los insumos en Inventario debe 
+--incrementarse según el detalle del encargo.
 --==========================================================================
 
 -- Antes de la recepción del encargo (Encargo ID 4 - Hospital 2, Insumos 9 y 10):
@@ -148,11 +178,17 @@ WHERE INV.id_hospital = 2 AND INV.id_insumo IN (9, 10);
 -- Se espera que Bisturí (ID 9) aparezca con 8 unidades y Pinza Kelly (ID 10) con 6 unidades.
 SELECT id_encargo, estado, fecha_recepcion FROM Encargo WHERE id_encargo = 4;
 
+-- Limpiar cambios
+ROLLBACK;
+
 --==========================================================================  
---PRUEBA 5.2: Recepción de un encargo donde algunos insumos ya existían y --otros son nuevos
+--PRUEBA 5.2: Recepción de un encargo donde algunos insumos ya existían y 
+--otros son nuevos
 --==========================================================================
---Descripción: Actualizar el estado de otro encargo pendiente a 'Recibido', --que contiene insumos ya existentes y nuevos en el inventario del hospital.
---Resultado Esperado: Las cantidades de los insumos existentes deben sumarse --a las del encargo, y los nuevos deben insertarse.
+--Descripción: Actualizar el estado de otro encargo pendiente a 'Recibido', 
+--que contiene insumos ya existentes y nuevos en el inventario del hospital.
+--Resultado Esperado: Las cantidades de los insumos existentes deben sumarse 
+--a las del encargo, y los nuevos deben insertarse.
 --==========================================================================
 -- Antes de la recepción del encargo (Encargo ID 6 - Hospital 3, Insumos 1 y 11):
 SELECT I.nombre, INV.cantidad
@@ -176,11 +212,16 @@ WHERE INV.id_hospital = 3 AND INV.id_insumo IN (1, 11);
 -- Se espera que Gasas (ID 11) aparezca con 100 unidades.
 SELECT id_encargo, estado, fecha_recepcion FROM Encargo WHERE id_encargo = 6;
 
+-- Limpiar cambios
+ROLLBACK;
+
 --======================================================================
 --PRUEBA 5.3: No activación del trigger si el estado no cambia a 'Recibido'
 --====================================================================== 
---Descripción: Crear un encargo y cambiar su estado a algo diferente de --n'Recibido' (ej. 'Cancelado') o a 'Recibido' si ya estaba 'Recibido'.
---Resultado Esperado: La cantidad de los insumos en Inventario no debe --cambiar.
+--Descripción: Crear un encargo y cambiar su estado a algo diferente de 
+--n'Recibido' (ej. 'Cancelado') o a 'Recibido' si ya estaba 'Recibido'.
+--Resultado Esperado: La cantidad de los insumos en Inventario no debe 
+--cambiar.
 --======================================================================
 
 -- Antes de la modificación del encargo (Encargo ID 8 - Hospital 4, Insumos 15 y 2):
@@ -204,12 +245,17 @@ WHERE INV.id_hospital = 4 AND INV.id_insumo IN (15, 2);
 -- Se espera que las cantidades de Mascarillas N95 y Ibuprofeno no hayan cambiado.
 SELECT id_encargo, estado, fecha_recepcion FROM Encargo WHERE id_encargo = 8;
 
+-- Limpiar cambios
+ROLLBACK;
+
 
 --======================================================================
 --PRUEBA 6.1: Pago completo de factura por seguro
 --======================================================================
---Descripción: Realizar un Pago_Seguro que cubra el monto total de una --factura.
---Resultado Esperado: El estado de la Factura debe cambiar a 'Pagada' y --metodo_pago a 'Seguro'.
+--Descripción: Realizar un Pago_Seguro que cubra el monto total de una 
+--factura.
+--Resultado Esperado: El estado de la Factura debe cambiar a 'Pagada' y 
+--metodo_pago a 'Seguro'.
 --======================================================================
 
 -- Antes del pago (Factura ID 8 - 220.40 Pendiente):
@@ -222,6 +268,9 @@ INSERT INTO Pago_Seguro (id_factura, id_afiliacion, monto_cubierto, fecha_pago, 
 -- Después del pago:
 SELECT id_factura, total, estado, metodo_pago FROM Factura WHERE id_factura = 8;
 -- Se espera que el estado sea 'Pagada' y metodo_pago 'Seguro'.
+
+-- Limpiar cambios
+ROLLBACK;
 
 --=====================================================================
 --PRUEBA 6.2: Pago parcial de factura por seguro
@@ -240,6 +289,9 @@ INSERT INTO Pago_Seguro (id_factura, id_afiliacion, monto_cubierto, fecha_pago, 
 -- Después del pago:
 SELECT id_factura, total, estado, metodo_pago FROM Factura WHERE id_factura = 14;
 -- Se espera que el estado siga siendo 'Pendiente'.
+
+-- Limpiar cambios
+ROLLBACK;
 
 --==========================================================================
 --PRUEBA 6.3: Múltiples pagos hasta cubrir el total
@@ -265,6 +317,9 @@ INSERT INTO Pago_Seguro (id_factura, id_afiliacion, monto_cubierto, fecha_pago, 
 -- Verificar el estado final (debería ser Pagada)
 SELECT id_factura, total, estado, metodo_pago FROM Factura WHERE id_factura = 14;
 
+-- Limpiar cambios
+ROLLBACK;
+
 
 --==========================================================================
 --PRUEBA 7.1: Integridad Referencial (Inventario con id_hospital inexistente)
@@ -273,6 +328,9 @@ SELECT id_factura, total, estado, metodo_pago FROM Factura WHERE id_factura = 14
 --==========================================================================
 -- ESTA INSERCIÓN DEBERÍA FALLAR
 INSERT INTO Inventario (id_hospital, id_insumo, cantidad) VALUES (9999, 1, 100);
+
+-- Limpiar cualquier transacción abierta
+ROLLBACK;
 
 --==========================================================================
 --PRUEBA 7.2: Integridad Referencial (Inventario con id_insumo inexistente)
@@ -283,7 +341,9 @@ INSERT INTO Inventario (id_hospital, id_insumo, cantidad) VALUES (9999, 1, 100);
 
 -- ESTA INSERCIÓN DEBERÍA FALLAR
 INSERT INTO Inventario (id_hospital, id_insumo, cantidad) VALUES (1, 9999, 100);
--- Considera usar un comando ROLLBACK si tu entorno lo requiere para deshacer la transacción de error.
+
+-- Limpiar cualquier transacción abierta
+ROLLBACK;
 
 --==========================================================================
 --PRUEBA 7.3: Integridad Referencial (Evento_Clinico con ci_paciente --inexistente)
@@ -294,6 +354,9 @@ INSERT INTO Inventario (id_hospital, id_insumo, cantidad) VALUES (1, 9999, 100);
 
 INSERT INTO Evento_Clinico (tipo, fecha, hora, ci_paciente, ci_medico, id_hospital, descripcion, costo) VALUES
 ('Consulta', '2025-01-01', '09:00:00', 'V-00000000', 'V-12345678', 1, 'Paciente inexistente', 100.00);
+
+-- Limpiar cualquier transacción abierta
+ROLLBACK;
 
 --========================================================================== 
 --PRUEBA 7.4: Integridad Referencial (Evento_Clinico con ci_medico --inexistente)
@@ -306,6 +369,9 @@ INSERT INTO Evento_Clinico (tipo, fecha, hora, ci_paciente, ci_medico, id_hospit
 INSERT INTO Evento_Clinico (tipo, fecha, hora, ci_paciente, ci_medico, id_hospital, descripcion, costo) VALUES
 ('Consulta', '2025-01-01', '09:00:00', 'V-10000001', 'V-00000000', 1, 'Medico inexistente', 100.00);
 
+-- Limpiar cualquier transacción abierta
+ROLLBACK;
+
 --==========================================================================
 --PRUEBA 7.5: Integridad Referencial (Habitacion con Departamento inexistente)
 --==========================================================================
@@ -316,6 +382,9 @@ INSERT INTO Evento_Clinico (tipo, fecha, hora, ci_paciente, ci_medico, id_hospit
 -- ESTA INSERCIÓN DEBERÍA FALLAR
 INSERT INTO Habitacion (id_hospital, numero_departamento, numero_habitacion, tipo, num_camas, tarifa_dia, ocupada) VALUES
 (1, 999, 'H999', 'Individual', 1, 100.00, FALSE);
+
+-- Limpiar cualquier transacción abierta
+ROLLBACK;
 
 
 --==========================================================================      
@@ -330,6 +399,9 @@ INSERT INTO Habitacion (id_hospital, numero_departamento, numero_habitacion, tip
 -- ESTA INSERCIÓN DEBERÍA FALLAR
 INSERT INTO Evento_Clinico (tipo, fecha, hora, ci_paciente, ci_medico, id_hospital, descripcion, costo) 
 VALUES ('Cirugia', '2025-06-20', '10:00:00', 'V-10000001', 'V-12345678', 1, 'Tipo inválido', 100.00);
+
+-- Limpiar cualquier transacción abierta
+ROLLBACK;
 
 
 -- Verificar que los tipos válidos sí funcionan
@@ -846,6 +918,9 @@ WHERE id_hospital = 1;
 
 -- Después de la actualización
 SELECT id_hospital, nombre, direccion FROM Hospital WHERE id_hospital = 1;
+
+-- Limpiar cambios
+ROLLBACK;
 =============================================================================
 
 PRUEBA 9.2: Actualizar el nombre de un departamento
@@ -862,6 +937,9 @@ WHERE id_hospital = 1 AND numero_departamento = 2;
 
 -- Después de la actualización
 SELECT id_hospital, numero_departamento, nombre FROM Departamento WHERE id_hospital = 1 AND numero_departamento = 2;
+
+-- Limpiar cambios
+ROLLBACK;
 ============================================================================
 
 PRUEBA 9.3: Actualizar la tarifa diaria de una habitación y su estado de ocupación
@@ -879,6 +957,9 @@ WHERE id_habitacion = 3;
 -- Después de la actualización
 SELECT id_habitacion, numero_habitacion, tarifa_dia, ocupada FROM Habitacion WHERE id_habitacion = 3;
 
+-- Limpiar cambios
+ROLLBACK;
+
 
 
 -- PRUEBA 9.4: Aumentar el salario de un médico
@@ -895,6 +976,9 @@ WHERE ci_personal = 'V-12345678';
 
 -- Después de la actualización
 SELECT ci_personal, nombre, apellido, salario FROM Personal WHERE ci_personal = 'V-12345678';
+
+-- Limpiar cambios
+ROLLBACK;
 --=========================================================================
 
 
@@ -913,6 +997,9 @@ WHERE ci_paciente = 'V-10000001';
 -- Después de la actualización
 SELECT ci_paciente, nombre, apellido, telefono FROM Paciente WHERE ci_paciente = 'V-10000001';
 
+-- Limpiar cambios
+ROLLBACK;
+
 
 -- PRUEBA 9.6: Actualizar el teléfono de una aseguradora
 -- Descripción: Modifica el número de teléfono de una aseguradora.
@@ -928,6 +1015,9 @@ WHERE id_aseguradora = 1;
 
 -- Después de la actualización
 SELECT id_aseguradora, nombre, telefono FROM Aseguradora WHERE id_aseguradora = 1;
+
+-- Limpiar cambios
+ROLLBACK;
 
 
 -- PRUEBA 9.7: Actualizar la descripción de un insumo médico
@@ -945,6 +1035,9 @@ WHERE id_insumo = 1;
 -- Después de la actualización
 SELECT id_insumo, nombre, descripcion FROM Insumo_Medico WHERE id_insumo = 1;
 
+-- Limpiar cambios
+ROLLBACK;
+
 
 -- PRUEBA 9.8: Actualizar el precio unitario de un insumo suministrado por un proveedor
 -- Descripción: Modifica el precio al que un proveedor suministra un insumo específico.
@@ -960,6 +1053,9 @@ WHERE id_proveedor = 1 AND id_insumo = 1;
 
 -- Después de la actualización
 SELECT id_proveedor, id_insumo, precio_unitario FROM Proveedor_Suministra WHERE id_proveedor = 1 AND id_insumo = 1;
+
+-- Limpiar cambios
+ROLLBACK;
 
 
 
@@ -977,6 +1073,9 @@ WHERE id_hospital = 1 AND id_insumo = 1;
 
 -- Después de la actualización
 SELECT id_hospital, id_insumo, stock_minimo FROM Inventario WHERE id_hospital = 1 AND id_insumo = 1;
+
+-- Limpiar cambios
+ROLLBACK;
 
 
 
@@ -997,6 +1096,9 @@ WHERE id_encargo = 8;
 -- Después de la actualización
 SELECT id_encargo, estado FROM Encargo WHERE id_encargo = 8;
 
+-- Limpiar cambios
+ROLLBACK;
+
 
 -- PRUEBA 9.11: Actualizar las observaciones de un evento clínico
 -- Descripción: Agrega o modifica las observaciones de un evento clínico.
@@ -1012,4 +1114,7 @@ WHERE id_evento = 1;
 
 -- Después de la actualización
 SELECT id_evento, descripcion, observaciones FROM Evento_Clinico WHERE id_evento = 1;
+
+-- Limpiar cambios
+ROLLBACK;
 
