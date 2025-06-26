@@ -255,13 +255,13 @@ INSERT INTO Personal (ci_personal, nombre, apellido, fecha_nacimiento, direccion
 ('V-55667788', 'Miguel', 'Torres', '1972-03-08', 'La Candelaria', '2006-02-10', 'Medico', 'Cirugía General', 3, 1, 6000.00),
 ('V-66778899', 'Isabel', 'Mendoza', '1986-09-14', 'Chacaíto', '2017-04-05', 'Medico', 'Medicina Interna', 4, 2, 4600.00),
 ('V-77889900', 'Rafael', 'Blanco', '1980-12-01', 'Sabana Grande', '2012-06-15', 'Administrativo', NULL, 1, 3, 3000.00),
-('V-88990011', 'Luisa', 'Herrera', '1985-04-17', 'Plaza Venezuela', '2014-09-20', 'Administrativo', NULL, 1, 3, 2800.00),
+('V-88990011', 'Luisa', 'Herrera', '1985-04-17', 'Plaza Venezuela', '2014-09-20', 'Administrativo', NULL, 1, 4, 2800.00),
 ('V-99001122', 'José', 'Flores', '1978-08-25', 'Catia', '2010-11-10', 'Administrativo', NULL, 2, 3, 3200.00),
-('V-00112233', 'Diana', 'Vega', '1983-02-12', 'Petare', '2013-01-25', 'Administrativo', NULL, 2, 3, 2900.00),
+('V-00112233', 'Diana', 'Vega', '1983-02-12', 'Petare', '2013-01-25', 'Administrativo', NULL, 2, 4, 2900.00),
 ('V-12312312', 'Alberto', 'Ruiz', '1976-06-30', 'El Valle', '2008-03-15', 'Administrativo', NULL, 3, 3, 3100.00),
-('V-23423423', 'Monica', 'Jimenez', '1982-10-08', 'Los Teques', '2011-07-20', 'Administrativo', NULL, 3, 3, 2700.00),
+('V-23423423', 'Monica', 'Jimenez', '1982-10-08', 'Los Teques', '2011-07-20', 'Administrativo', NULL, 3, 4, 2700.00),
 ('V-34534534', 'Carlos', 'Medina', '1979-01-22', 'Guarenas', '2009-05-10', 'Administrativo', NULL, 4, 3, 3300.00),
-('V-45645645', 'Teresa', 'Ortiz', '1984-05-16', 'La Guaira', '2015-08-25', 'Administrativo', NULL, 4, 3, 2600.00),
+('V-45645645', 'Teresa', 'Ortiz', '1984-05-16', 'La Guaira', '2015-08-25', 'Administrativo', NULL, 4, 4, 2600.00),
 ('V-56756756', 'Ricardo', 'Campos', '1977-09-11', 'Macaracuay', '2007-12-05', 'Administrativo', NULL, 1, 3, 3500.00),
 ('V-67867867', 'Sandra', 'Luna', '1981-03-27', 'El Hatillo', '2010-02-15', 'Administrativo', NULL, 2, 3, 3400.00),
 ('V-78978978', 'Andres', 'Paredes', '1975-07-03', 'Baruta', '2006-06-20', 'Administrativo', NULL, 3, 3, 3600.00),
@@ -282,7 +282,15 @@ INSERT INTO Personal (ci_personal, nombre, apellido, fecha_nacimiento, direccion
 ('V-78787878', 'Gabriela', 'Paz', '1993-04-25', 'Los Teques, Miranda', '2024-01-01', 'Administrativo', NULL, 8, 5, 2900.00), -- Dept Junta Directiva
 ('V-21098765', 'Gabriel', 'Vivas', '1986-08-14', 'Sector Centro, Los Teques', '2021-04-22', 'Medico', 'Hemodinamia', 9, 1, 7200.00),
 ('V-11009988', 'Esteban', 'Pinto', '1972-06-25', 'Sector El Carmen, Caracas', '2016-04-01', 'Medico', 'Cirugía Cardiovascular', 9, 2, 8800.00),
-('V-90909090', 'Pedro', 'Reyes', '1986-11-11', 'Guatire, Miranda', '2019-06-01', 'Administrativo', NULL, 9, 5, 3300.00); -- Dept Contratos y Adquisiciones
+('V-90909090', 'Pedro', 'Reyes', '1986-11-11', 'Guatire, Miranda', '2019-06-01', 'Administrativo', NULL, 9, 5, 3300.00), -- Dept Contratos y Adquisiciones
+('V-15151515', 'Roberto', 'Moreno', '1980-03-15', 'Av. Libertad, Cumaná', '2020-01-15', 'Medico', 'Anestesiología', 5, 3, 7500.00),
+('V-16161616', 'Carmen', 'Villanueva', '1985-07-20', 'Calle Central, Cumaná', '2021-03-10', 'Administrativo', NULL, 5, 4, 3000.00),
+('V-17171717', 'Fernando', 'Castillo', '1978-11-12', 'Urb. Maracaibo Norte', '2019-08-05', 'Medico', 'Medicina Familiar', 6, 1, 6500.00),
+('V-18181818', 'Lucia', 'Ramírez', '1986-05-25', 'Av. Delicias, Maracaibo', '2022-02-20', 'Administrativo', NULL, 6, 5, 2950.00),
+('V-19191919', 'Alejandro', 'Torres', '1982-09-08', 'Centro Barinas', '2020-06-15', 'Administrativo', NULL, 7, 5, 3100.00),
+('V-20202020', 'Patricia', 'González', '1984-12-03', 'Av. San Martín, Caracas', '2021-09-10', 'Administrativo', NULL, 8, 4, 3200.00),
+('V-21212121', 'Manuel', 'Fernández', '1979-04-18', 'Los Teques Centro', '2018-11-25', 'Medico', 'Electrocardiografía', 9, 3, 6800.00),
+('V-22222222', 'Elena', 'Vargas', '1987-08-14', 'Guatire, Miranda', '2022-04-12', 'Administrativo', NULL, 9, 4, 3150.00);
 
 -- Horarios de trabajo (5 por trabajador = 150)
 INSERT INTO Horario_Trabajo (ci_personal, dia_semana, hora_entrada, hora_salida) VALUES
@@ -470,7 +478,127 @@ INSERT INTO Horario_Trabajo (ci_personal, dia_semana, hora_entrada, hora_salida)
 ('V-76543210', 'Martes', '09:00', '17:00'),
 ('V-76543210', 'Miercoles', '09:00', '17:00'),
 ('V-76543210', 'Jueves', '09:00', '17:00'),
-('V-76543210', 'Viernes', '09:00', '17:00');
+('V-76543210', 'Viernes', '09:00', '17:00'),
+
+('V-67890123', 'Lunes', '08:00', '16:00'),
+('V-67890123', 'Martes', '08:00', '16:00'),
+('V-67890123', 'Miercoles', '08:00', '16:00'),
+('V-67890123', 'Jueves', '08:00', '16:00'),
+('V-67890123', 'Viernes', '08:00', '16:00'),
+
+('V-66778899', 'Lunes', '09:00', '17:00'),
+('V-66778899', 'Martes', '09:00', '17:00'),
+('V-66778899', 'Miercoles', '09:00', '17:00'),
+('V-66778899', 'Jueves', '09:00', '17:00'),
+('V-66778899', 'Viernes', '09:00', '17:00'),
+
+('V-34534534', 'Lunes', '08:30', '16:30'),
+('V-34534534', 'Martes', '08:30', '16:30'),
+('V-34534534', 'Miercoles', '08:30', '16:30'),
+('V-34534534', 'Jueves', '08:30', '16:30'),
+('V-34534534', 'Viernes', '08:30', '16:30'),
+
+('V-45645645', 'Lunes', '08:00', '16:00'),
+('V-45645645', 'Martes', '08:00', '16:00'),
+('V-45645645', 'Miercoles', '08:00', '16:00'),
+('V-45645645', 'Jueves', '08:00', '16:00'),
+('V-45645645', 'Viernes', '08:00', '16:00'),
+
+('V-89089089', 'Lunes', '09:00', '17:00'),
+('V-89089089', 'Martes', '09:00', '17:00'),
+('V-89089089', 'Miercoles', '09:00', '17:00'),
+('V-89089089', 'Jueves', '09:00', '17:00'),
+('V-89089089', 'Viernes', '09:00', '17:00'),
+
+('V-99887766', 'Lunes', '07:00', '15:00'),
+('V-99887766', 'Martes', '07:00', '15:00'),
+('V-99887766', 'Miercoles', '07:00', '15:00'),
+('V-99887766', 'Jueves', '07:00', '15:00'),
+('V-99887766', 'Viernes', '07:00', '15:00'),
+
+('V-88776655', 'Lunes', '08:00', '16:00'),
+('V-88776655', 'Martes', '08:00', '16:00'),
+('V-88776655', 'Miercoles', '08:00', '16:00'),
+('V-88776655', 'Jueves', '08:00', '16:00'),
+('V-88776655', 'Viernes', '08:00', '16:00'),
+
+('V-00998877', 'Lunes', '09:00', '17:00'),
+('V-00998877', 'Martes', '09:00', '17:00'),
+('V-00998877', 'Miercoles', '09:00', '17:00'),
+('V-00998877', 'Jueves', '09:00', '17:00'),
+('V-00998877', 'Viernes', '09:00', '17:00'),
+
+('V-78787878', 'Lunes', '08:30', '16:30'),
+('V-78787878', 'Martes', '08:30', '16:30'),
+('V-78787878', 'Miercoles', '08:30', '16:30'),
+('V-78787878', 'Jueves', '08:30', '16:30'),
+('V-78787878', 'Viernes', '08:30', '16:30'),
+
+('V-21098765', 'Lunes', '08:00', '16:00'),
+('V-21098765', 'Martes', '08:00', '16:00'),
+('V-21098765', 'Miercoles', '08:00', '16:00'),
+('V-21098765', 'Jueves', '08:00', '16:00'),
+('V-21098765', 'Viernes', '08:00', '16:00'),
+
+('V-11009988', 'Lunes', '07:00', '15:00'),
+('V-11009988', 'Martes', '07:00', '15:00'),
+('V-11009988', 'Miercoles', '07:00', '15:00'),
+('V-11009988', 'Jueves', '07:00', '15:00'),
+('V-11009988', 'Viernes', '07:00', '15:00'),
+
+('V-90909090', 'Lunes', '08:30', '16:30'),
+('V-90909090', 'Martes', '08:30', '16:30'),
+('V-90909090', 'Miercoles', '08:30', '16:30'),
+('V-90909090', 'Jueves', '08:30', '16:30'),
+('V-90909090', 'Viernes', '08:30', '16:30'),
+
+('V-15151515', 'Lunes', '07:00', '15:00'),
+('V-15151515', 'Martes', '07:00', '15:00'),
+('V-15151515', 'Miercoles', '07:00', '15:00'),
+('V-15151515', 'Jueves', '07:00', '15:00'),
+('V-15151515', 'Viernes', '07:00', '15:00'),
+
+('V-16161616', 'Lunes', '08:00', '16:00'),
+('V-16161616', 'Martes', '08:00', '16:00'),
+('V-16161616', 'Miercoles', '08:00', '16:00'),
+('V-16161616', 'Jueves', '08:00', '16:00'),
+('V-16161616', 'Viernes', '08:00', '16:00'),
+
+('V-17171717', 'Lunes', '08:30', '16:30'),
+('V-17171717', 'Martes', '08:30', '16:30'),
+('V-17171717', 'Miercoles', '08:30', '16:30'),
+('V-17171717', 'Jueves', '08:30', '16:30'),
+('V-17171717', 'Viernes', '08:30', '16:30'),
+
+('V-18181818', 'Lunes', '09:00', '17:00'),
+('V-18181818', 'Martes', '09:00', '17:00'),
+('V-18181818', 'Miercoles', '09:00', '17:00'),
+('V-18181818', 'Jueves', '09:00', '17:00'),
+('V-18181818', 'Viernes', '09:00', '17:00'),
+
+('V-19191919', 'Lunes', '08:00', '16:00'),
+('V-19191919', 'Martes', '08:00', '16:00'),
+('V-19191919', 'Miercoles', '08:00', '16:00'),
+('V-19191919', 'Jueves', '08:00', '16:00'),
+('V-19191919', 'Viernes', '08:00', '16:00'),
+
+('V-20202020', 'Lunes', '08:30', '16:30'),
+('V-20202020', 'Martes', '08:30', '16:30'),
+('V-20202020', 'Miercoles', '08:30', '16:30'),
+('V-20202020', 'Jueves', '08:30', '16:30'),
+('V-20202020', 'Viernes', '08:30', '16:30'),
+
+('V-21212121', 'Lunes', '07:00', '15:00'),
+('V-21212121', 'Martes', '07:00', '15:00'),
+('V-21212121', 'Miercoles', '07:00', '15:00'),
+('V-21212121', 'Jueves', '07:00', '15:00'),
+('V-21212121', 'Viernes', '07:00', '15:00'),
+
+('V-22222222', 'Lunes', '08:00', '16:00'),
+('V-22222222', 'Martes', '08:00', '16:00'),
+('V-22222222', 'Miercoles', '08:00', '16:00'),
+('V-22222222', 'Jueves', '08:00', '16:00'),
+('V-22222222', 'Viernes', '08:00', '16:00');
 
 -- Pacientes (20+)
 INSERT INTO Paciente (ci_paciente, nombre, apellido, fecha_nacimiento, sexo, direccion, telefono, contacto_emergencia, telefono_emergencia, responsable_nombre, responsable_telefono) VALUES
@@ -718,13 +846,10 @@ INSERT INTO Evento_Clinico (tipo, fecha, hora, ci_paciente, ci_medico, id_hospit
 ('Procedimiento', '2025-04-05', '16:00', 'V-20000005', 'V-01234567', 4, NULL, 'Endoscopia', 'Digestiva alta', 600.00);
 
 INSERT INTO Evento_Usa_Insumo (id_evento, id_insumo, cantidad) VALUES
--- Las Consultas (IDs 1-10) no suelen usar insumos rastreables de esta forma.
-
--- Operaciones (ID de Evento: del 11 al 25, siguiendo el orden de tu script)
 -- Evento 11: Cateterismo cardíaco (Operacion)
 (11, 13, 2),  -- Guantes látex M
-(11, 12, 1),  -- Guantes látex M (por si es de los que requieren más de un par o tipo)
-(11, 14, 1),  -- Jeringas 5ml (para inyección de contraste, etc.)
+(11, 12, 1),  -- Guantes látex M 
+(11, 14, 1),  -- Jeringas 5ml 
 
 -- Evento 12: Apendicectomía (Operacion)
 (12, 7, 1),   -- Bisturí #11
@@ -734,7 +859,7 @@ INSERT INTO Evento_Usa_Insumo (id_evento, id_insumo, cantidad) VALUES
 
 -- Evento 13: Reducción de fractura (Operacion)
 (13, 7, 1),   -- Bisturí #11
-(13, 8, 2),   -- Pinza Kelly (para manipulación ósea o hemostasia)
+(13, 8, 2),   -- Pinza Kelly 
 (13, 11, 10), -- Gasas estériles
 (13, 12, 4),  -- Guantes látex M
 
@@ -748,16 +873,16 @@ INSERT INTO Evento_Usa_Insumo (id_evento, id_insumo, cantidad) VALUES
 -- Evento 15: Colecistectomía (Operacion)
 (15, 7, 1),   -- Bisturí #11
 (15, 8, 2),   -- Pinza Kelly
-(15, 10, 1),  -- Separador Farabeuf (para laparoscopia si es abierto)
+(15, 10, 1),  -- Separador Farabeuf 
 (15, 11, 8),  -- Gasas estériles
 (15, 12, 3),  -- Guantes látex M
 
 -- Evento 16: Bypass coronario (Operacion)
-(16, 7, 2),   -- Bisturí #11 (varios)
-(16, 8, 4),   -- Pinza Kelly (varias)
-(16, 11, 20), -- Gasas estériles (muchas)
-(16, 12, 6),  -- Guantes látex M (varios cambios)
-(16, 13, 5),  -- Jeringas 5ml (para drogas, etc.)
+(16, 7, 2),   -- Bisturí #11 
+(16, 8, 4),   -- Pinza Kelly 
+(16, 11, 20), -- Gasas estériles 
+(16, 12, 6),  -- Guantes látex M 
+(16, 13, 5),  -- Jeringas 5ml 
 
 -- Evento 17: Hernioplastia (Operacion)
 (17, 7, 1),   -- Bisturí #11
@@ -778,7 +903,7 @@ INSERT INTO Evento_Usa_Insumo (id_evento, id_insumo, cantidad) VALUES
 -- Evento 20: Angioplastia (Operacion)
 (20, 13, 2),  -- Jeringas 5ml
 (20, 12, 2),  -- Guantes látex M
-(20, 14, 1), -- Alcohol 70% (para desinfección) - **Nota: si unidad_medida es Litro, 0.5 es medio litro**
+(20, 14, 1), -- Alcohol 70% 
 
 -- Evento 21: Amigdalectomía (Operacion)
 (21, 7, 1),   -- Bisturí #11
@@ -809,27 +934,25 @@ INSERT INTO Evento_Usa_Insumo (id_evento, id_insumo, cantidad) VALUES
 (25, 11, 18), -- Gasas estériles
 (25, 12, 4),  -- Guantes látex M
 
-
--- Procedimientos/Tratamientos (ID de Evento: del 26 al 30, siguiendo el orden de tu script)
 -- Evento 26: Ecocardiograma (Procedimiento)
-(26, 12, 1),  -- Guantes látex M (para protección del personal)
+(26, 12, 1),  -- Guantes látex M 
 
 -- Evento 27: Nebulización (Procedimiento)
-(27, 1, 1),   -- Paracetamol 500mg (asumiendo que se diluye, aunque sea un medicamento) - **Este sería un uso de medicamento**
-(27, 13, 1),  -- Jeringas 5ml (para preparar la solución)
+(27, 1, 1),   -- Paracetamol 500mg 
+(27, 13, 1),  -- Jeringas 5ml 
 
 -- Evento 28: Glucometría (Procedimiento)
 (28, 12, 1),  -- Guantes látex M
-(28, 13, 1),  -- Jeringas 5ml (para muestra de sangre, o lanceta si la consideras jeringa pequeña)
+(28, 13, 1),  -- Jeringas 5ml 
 
 -- Evento 29: Electroencefalograma (Procedimiento)
-(29, 12, 1),  -- Guantes látex M (para el técnico)
-(29, 14, 2), -- Alcohol 70% (para limpieza de la piel)
+(29, 12, 1),  -- Guantes látex M
+(29, 14, 2), -- Alcohol 70% 
 
 -- Evento 30: Endoscopia (Procedimiento)
 (30, 11, 5),  -- Gasas estériles
 (30, 12, 2),  -- Guantes látex M
-(30, 13, 1);  -- Jeringas 5ml (para sedación ligera, etc.)
+(30, 13, 1);  -- Jeringas 5ml 
 
 -- Facturas
 INSERT INTO Factura (id_evento, ci_paciente, fecha_emision, subtotal, iva, total, estado, metodo_pago) VALUES
