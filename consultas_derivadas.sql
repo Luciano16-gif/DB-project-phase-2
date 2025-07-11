@@ -141,3 +141,73 @@ FROM Hospital h
 LEFT JOIN Habitacion hab ON h.id_hospital = hab.id_hospital
 GROUP BY h.id_hospital, h.nombre
 ORDER BY porcentaje_ocupacion DESC;
+
+-- 9. Conteo de Personal por Tipo y Especialidad Médica
+
+SELECT
+    tipo,
+    especialidad, -- Será NULL para el personal administrativo
+    COUNT(*) AS cantidad_personal
+FROM
+    Personal
+GROUP BY
+    tipo, especialidad
+ORDER BY
+    tipo, cantidad_personal DESC;
+
+-- 10. Distribución de Pacientes por Rango de Edad
+
+SELECT
+    CASE
+        WHEN EXTRACT(YEAR FROM AGE(fecha_nacimiento)) < 18 THEN '0-17 (Pediátrico)'
+        WHEN EXTRACT(YEAR FROM AGE(fecha_nacimiento)) BETWEEN 18 AND 40 THEN '18-40 (Adulto Joven)'
+        WHEN EXTRACT(YEAR FROM AGE(fecha_nacimiento)) BETWEEN 41 AND 65 THEN '41-65 (Adulto)'
+        ELSE '65+ (Adulto Mayor)'
+    END AS rango_edad,
+    COUNT(*) AS numero_de_pacientes
+FROM
+    Paciente
+GROUP BY
+    rango_edad
+ORDER BY
+    rango_edad;
+
+-- 11. Resumen del Estado de las Facturas
+
+SELECT
+    estado,
+    COUNT(id_factura) AS cantidad_facturas,
+    SUM(total) AS monto_total
+FROM
+    Factura
+GROUP BY
+    estado
+ORDER BY
+    estado;
+
+-- 12. Insumos por Categoría General
+
+SELECT
+    tipo,
+    subtipo,
+    COUNT(id_insumo) AS cantidad_de_items
+FROM
+    Insumo_Medico
+GROUP BY
+    tipo, subtipo
+ORDER BY
+    tipo, cantidad_de_items DESC;
+
+-- 14. Conteo de Pacientes por Sexo
+
+SELECT
+    CASE 
+        WHEN sexo = 'M' THEN 'Masculino'
+        WHEN sexo = 'F' THEN 'Femenino'
+        ELSE 'No especificado'
+    END AS sexo,
+    COUNT(*) AS cantidad_pacientes
+FROM
+    Paciente
+GROUP BY
+    sexo;
